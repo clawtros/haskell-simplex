@@ -18,7 +18,7 @@ shade n =
 animateSimplex :: Double -> Double -> IO ()
 animateSimplex rate scale =
   let
-    grid = [[(x, y) | y <- [1..160]] | x <- [1..50]]
+    grid = [[(x, y) | y <- [1..50]] | x <- [1..20]]
     strgrid z = intercalate "\n"
       $ map (\row ->
                 concatMap (\(x_, y_) ->
