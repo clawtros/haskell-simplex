@@ -1,35 +1,46 @@
 module Lib
-    ( animateSimplex
-    ) where
+  ( animateSimplex
+  )
+where
 
 import Simplex
 import Data.List
+import Data.Maybe
+import Control.Parallel.Strategies (parList, rdeepseq, using)
 
-
-clear :: IO ()
-clear = putStr "\ESC[2J"
+nth :: [a] -> Int -> Maybe a
+nth l n =
+  case drop n l of
+    [] -> Nothing
+    a:rest -> Just a
 
 shade :: Double -> String
 shade n =
-  let chars = " .\9617\9618\9619\9608"
-  in
-  [chars !! (floor $ (n + 0.5) * (fromIntegral $ length chars))]
+  let chars =
+        " _.,~=|iI]Z3VGdDQg#@"
 
-animateSimplex :: Double -> Double -> IO ()
-animateSimplex rate scale =
-  let
-    grid = [[(x, y) | y <- [1..50]] | x <- [1..20]]
-    strgrid z = intercalate "\n"
-      $ map (\row ->
-                concatMap (\(x_, y_) ->
-                          shade (noise3D (x_ * scale) (y_ * scale) z)) row
-         ) grid
-  in
-    sequence_
-    $ concatMap (\n -> [
-              putStr "\ESC[1;1H"
-              , putStrLn
-                $ strgrid
-                $ n * rate
-              ]) [1..100000]
+  in [fromMaybe '?' $ nth chars (floor $ (n + 0.5) * (fromIntegral $ length chars))]
+
+animateSimplex :: Double -> Double -> Int -> Int -> Double -> IO ()
+animateSimplex rate scale w h z =
+  let grid = [[ (fromIntegral x :: Double, fromIntegral y :: Double)
+        | y <- [1 .. w] ]
+        | x <- [1 .. (h - 1)] ]
+
+      rowF = (\row -> concat $ intersperse "" $ map
+          (\(x_, y_) -> shade (noise3D (x_ * scale) (y_ * scale) z))
+          row
+        )
+
+      mapped = (map
+                rowF
+                grid
+               ) `using` parList rdeepseq
+      
+      strgrid = concat $ intersperse "\n" mapped
+  in do
+        putStr "\ESC[1;1H"
+        putStr strgrid
+        animateSimplex rate scale w h (z + rate)
+                            
   
